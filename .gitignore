@@ -125,5 +125,16 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
-.pyre/
+temp.py
+testFile.py
+*yellow_tripdata_*
+*/__pycache__/*
+*/.ipynb_checkpoints/*
+*/.vscode/*
+*.pickle
+*html
+*npy
+*.pyc
+*.zip
+*.mp4
+*.csv
