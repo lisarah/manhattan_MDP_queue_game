@@ -215,7 +215,7 @@ class queue_game:
                 z: sum([z_density[t][(z, 0)] for t in range(self.T)])/self.T 
                 for z in self.z_list}
         return avg_density
-    
+ 
     def get_violations(self, z_density, c_val, return_density=True):
         constraint_violation= {}
         v_density = {}

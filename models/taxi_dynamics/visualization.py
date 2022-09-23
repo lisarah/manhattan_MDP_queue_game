@@ -32,6 +32,16 @@ _shape_file = shapefile.Reader("models/taxi_dynamics/shape/taxi_zones.shp")
 _fields_name = [field[0] for field in _shape_file.fields[1:]]
 _shape_fields = dict(zip(_fields_name, list(range(len(_fields_name)))))
 
+def label_states(violation_density):
+    """ Find the name that corresponds to states violating density constraints.
+    """
+    violation_states = list(violation_density.keys())
+    if type(violation_states[0]) == tuple:
+        violation_states = [v[0] for v in violation_states]
+    bar_labels = [m_neighbors.ZONE_NAME[k] for k in violation_states]  
+    return bar_labels
+
+
 def get_boundaries(borough_str):
     """ Return the lat lon boundaries of the input shape."""
     lat, lon = [], []
@@ -110,13 +120,12 @@ def draw_shape(ax, shape, color):
 
 def update_borough(t, patch_dict, densities, color_map, norm):
     for zone_ind, patches in patch_dict.items():
-        R,G,B,A = color_map(norm((densities[zone_ind][t])))
+        R,G,B,A = color_map(norm((densities[(zone_ind, 0)])))
         color = [R,G,B]    
         for patch in patches:
             patch.set_facecolor(color)
             
-def draw_borough(ax, densities, borough_str, time,
-                 color_map, norm):
+def draw_borough(ax, densities, borough_str, color_map, norm):
     """ Plot the given zone densities in the borough of interest.
     
     Args:
@@ -145,15 +154,18 @@ def draw_borough(ax, densities, borough_str, time,
         record = shape_entry.record
         borough_name = record[_shape_fields['borough']]
         
+        # print(f"in record {record[_shape_fields['zone']]} borough {borough_name}")
         if (record[_shape_fields['zone']] ==
             "Governor's Island/Ellis Island/Liberty Island"):
             continue            
         elif borough_name != borough_str:
+            # print(f' name not right')
             continue
         zone_ind = m_neighbors.ZONE_IND[record[_shape_fields['zone']]]
         if zone_ind in [103, 104, 105, 153, 194, 202]:
             continue
-            
+        # else:
+        #     print(f' found zone {zone_ind}')
         R,G,B,A = color_map(norm((densities[zone_ind])))
         color = [R,G,B]              
         patch_list = draw_shape(ax, shape, color)
@@ -177,9 +189,9 @@ def draw_borough(ax, densities, borough_str, time,
     # plt.grid()
     return patch_dict
 
-def set_axis_limits(ax_bar, ax_time, T, is_toll):
+def set_axis_limits(ax_bar, ax_time, T, is_toll, max_d, min_d, constrained_val):
     if not is_toll:
-        ax_bar.set_ylim([0, 450])
+        ax_bar.set_ylim([constrained_val-10, max_d+10])
     else:
         ax_bar.set_ylim([0, 0.5]) # when drawing tolling value        
         ax_bar.set_xlim([0, T-1])
@@ -188,16 +200,28 @@ def set_axis_limits(ax_bar, ax_time, T, is_toll):
 
     ax_bar.xaxis.set_visible(False)           
     ax_time.set_xlim([0, T-1])
-    ax_time.set_ylim([0, 550])
+    ax_time.set_ylim([min_d-10, 550])
     ax_time.set_xlabel(r"Time",fontsize=13)
     ax_time.grid(True)
 
-def animate_combo(file_name, violation_states, 
-                  density_dict, 
-                  bar_labels, 
-                  T, 
-                  borough_str, 
-                  color_map, norm, toll_val = None):
+def animate_combo(file_name, z_density, violation_density, 
+                  constraint_violation, toll_val=None, max_d=None, min_d=None,
+                  plot_toll=False):
+    T = len(z_density)
+    # determine min/max density levels
+    min_density = 1
+    max_density = 1
+    for t in range(T): 
+        min_density = min(list(z_density[t].values()) + [min_density])
+        max_density = max(list(z_density[t].values()) + [max_density])
+    if max_d != None:
+        max_density = max_d
+    if min_d != None:
+        min_density = min_d
+    print(f'minimum density = {min_density}')
+    print(f'maximum density = {max_density}')
+
+    # set up figure
     fig_width = 5.3 * 2
     f = plt.figure(figsize=(fig_width,8))
     ax_bar = f.add_subplot(2, 2, 1)
@@ -205,32 +229,46 @@ def animate_combo(file_name, violation_states,
     ax_map = f.add_subplot(1, 2, 2)
     ax_map.xaxis.set_visible(False)
     ax_map.yaxis.set_visible(False)
-    set_axis_limits(ax_bar, ax_time, T, toll_val is not None)
+    set_axis_limits(ax_bar, ax_time, T, plot_toll, max_density, min_density,
+                    toll_val)
     
-    avg_density = {}
-    for ind in density_dict.keys():
-        avg_density[ind] = density_dict[ind][0]
-    patch_dict = draw_borough(ax_map, avg_density, borough_str, 'average', 
-                              color_map, norm)      
+    # set up heat map color map and bar plot legend
+    norm = mpl.colors.Normalize(vmin=(min_density), vmax=(max_density))
+    color_map = plt.get_cmap('coolwarm') # Spectral
+    bar_labels = label_states(violation_density)
+    
+    
+    d_0 = {z_ind[0]: z_density[0][z_ind] for z_ind in z_density[0].keys() 
+           if z_ind[1] == 0}
+    patch_dict = draw_borough(ax_map, d_0, 'Manhattan', color_map, norm)      
     plt.show()
     def animate(i):
         ax_bar.clear()
         ax_time.clear()
+        ax_time.plot([toll_val]*T, linewidth=6, alpha=0.5, color=[0.1,0.1,0.1])
+        
         loc_ind = 0
-        time_step = i % T 
-        set_axis_limits(ax_bar, ax_time, T, toll_val is not None)
-        for violation in violation_states:
-            bar_val = sum(density_dict[violation][:time_step+1])/(time_step + 1)
-            if toll_val is not None:
-                ax_bar.plot(toll_val[loc_ind][:time_step+1], linewidth=3)
+        time_step = min(i % T , T-1)
+        d_t = {z_ind: z_density[time_step][z_ind] 
+               for z_ind in z_density[time_step].keys() if z_ind[1] == 0}
+            
+        set_axis_limits(ax_bar, ax_time, T, plot_toll, 
+                        max_density, min_density, toll_val)
+        for violation in violation_density.keys():
+            bar_val = z_density[time_step][violation]
+            if plot_toll:
+                ax_bar.plot(toll_val)
             else:   
                 ax_bar.bar(loc_ind, bar_val, width = 0.8, 
                            label=bar_labels[loc_ind])
-            ax_time.plot(density_dict[violation][:time_step+1],linewidth=3, 
-                         label=bar_labels[loc_ind])
+            
+            ax_time.plot([z_density[t][violation] for t in range(time_step)],
+                          linewidth=3, label=bar_labels[loc_ind], marker='D', 
+                          markersize=8)
             loc_ind +=1
         ax_time.legend(loc='lower right', fontsize=13)
-        update_borough(time_step, patch_dict, density_dict, color_map, norm)
+        update_borough(time_step, patch_dict, z_density[time_step], 
+                       color_map, norm)
   
     ani = animation.FuncAnimation(f, animate, frames=range(T), interval=250)
     plt.show()
@@ -263,16 +301,12 @@ def plot_borough_progress(borough_str, plot_density, times):
         ax = f.add_subplot(1, subplot_num, 1 + plot_ind)
         draw_borough(ax, density_dicts[plot_ind], borough_str, 
                      times[plot_ind], color_map, norm)
-    # plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color_map), ax=ax)
-
-    # ax = plt.subplot(1, 2, 2)
-    # ax.set_title("Zones in NYC")
-    # draw_zone_map(ax, sf)
     plt.show()
     
     
 def summary_plot(z_density, constraint_violation, violation_density, 
-                 avg_density, constrained_value, tolls=None, max_d=None):
+                 avg_density, constrained_value, tolls=None, max_d=None, 
+                 min_d=None):
     T = len(z_density)
     # determine min/max density levels
     min_density = 1
@@ -280,48 +314,39 @@ def summary_plot(z_density, constraint_violation, violation_density,
     for t in range(T): 
         min_density = min(list(z_density[t].values()) + [min_density])
         max_density = max(list(z_density[t].values()) + [max_density])
+    heat_max = max_density
+    heat_min = min_density
     if max_d != None:
         max_density = max_d
+    if min_d != None:
+        min_density= min_d
     print(f'minimum density = {min_density}')
     print(f'maximum density = {max_density}')
 
     # set up heat map color map and bar plot legend
-    norm = mpl.colors.Normalize(vmin=(min_density), vmax=(max_density))
+    norm = mpl.colors.Normalize(vmin=(heat_min), vmax=(heat_max))
     color_map = plt.get_cmap('coolwarm') # Spectral
-    bar_labels = []  
-    for z in violation_density.keys():
-        found = False
-        if type(z) == tuple:
-            z_lookup = z[0]
-        else:
-            z_lookup = z
-        # this can be optimized by reversing the look up table key/value
-        for zone_name, ind in m_neighbors.ZONE_IND.items():
-            if found:
-                break
-            if ind == z_lookup:
-                bar_labels.append(zone_name)
-                found = True
+    bar_labels = label_states(violation_density)
+   
 
     # overall summary plot        
     fig_width = 5.3 * 2
     f = plt.figure(figsize=(fig_width,8))
+    ax_bar = f.add_subplot(2,2,1)
+    ax_time = f.add_subplot(2,2,3)
+    ax_map = f.add_subplot(1,2,2)
+    set_axis_limits(ax_bar, ax_time, T, False, max_d, min_d, constrained_value)
     seq = [i for i in range(len(violation_density))] #
     # if toll values are given, plot tolls on upper left
     if tolls != None:
-        ax_toll_val = f.add_subplot(2,2,1) # (2,2,2)
         toll_time_vary = []
         for line in tolls.values(): 
             toll_time_vary.append(line)
         for line_ind in seq:
-            ax_toll_val.plot(toll_time_vary[line_ind], linewidth=3, 
-                             label=bar_labels[line_ind])
-        plt.setp(ax_toll_val.get_xticklabels(), visible=False)
-        plt.grid()
+            ax_bar.plot(toll_time_vary[line_ind], linewidth=3, 
+                        label=bar_labels[line_ind])
     else:
-    # bar plot upper left
-        ax_bar = f.add_subplot(2,2,1)
-        
+    # bar plot upper left        
         violations = []
         for v in constraint_violation.values(): 
             violations.append(v)
@@ -331,49 +356,29 @@ def summary_plot(z_density, constraint_violation, violation_density,
                     width = 0.8,  
                     label=bar_labels[bar_ind])
             loc_ind +=1
-        ax_bar.set_ylim([constrained_value, max_density])
-        ax_bar.xaxis.set_visible(False)
-        plt.legend(fontsize=13)
+        ax_bar.legend(fontsize=13)
 
     # line plot lower left
-    ax_time = f.add_subplot(2, 2, 3)
     ax_time.plot(constrained_value * np.ones(T), 
               linewidth = 6, alpha = 0.5, color=[0,0,0])
     lines = []
     for line in violation_density.values(): 
         lines.append(line)
     for line_ind in seq:
-        plt.plot(lines[line_ind], linewidth=3, # color=bar_colors[line_ind], 
-                  label=bar_labels[line_ind])
-    ax_time.set_ylim([150, max_density])
-    plt.xlabel(r"Time",fontsize=13)
-    plt.grid()
-    plt.legend(fontsize=13)
+        ax_time.plot(lines[line_ind], linewidth=3, label=bar_labels[line_ind], 
+                     marker='D', markersize=8)
+    ax_time.legend(fontsize=13)
     
     
     # heat map right side
-    ax_map = f.add_subplot(1,2,2)
-    draw_borough(ax_map, avg_density, 'Manhattan', 'average', color_map, norm)
+    draw_borough(ax_map, avg_density, 'Manhattan', color_map, norm)
     ax_map.xaxis.set_visible(False)
     ax_map.yaxis.set_visible(False)
     plt.show()
     
 def toll_summary_plot(violation_density, tolls,
                    constrained_value, max_d, min_d=150, T=12):
-    bar_labels = []  
-    for z in violation_density.keys():
-        found = False
-        if type(z) == tuple:
-            z_lookup = z[0]
-        else:
-            z_lookup = z
-        # this can be optimized by reversing the look up table key/value
-        for zone_name, ind in m_neighbors.ZONE_IND.items():
-            if found:
-                break
-            if ind == z_lookup:
-                bar_labels.append(zone_name)
-                found = True
+    bar_labels = label_states(violation_density)
 
     # overall summary plot        
     fig_width = 5.3 * 2
