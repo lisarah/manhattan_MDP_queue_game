@@ -41,6 +41,9 @@ import util.trip as trip
 import models.taxi_dynamics.visualization as visual
 from haversine import haversine
 import pickle
+import os
+
+
 #%% DATA %%#
 # Import trip data into numpy array
 months = ['dec', 'jan']
@@ -189,7 +192,15 @@ for month in months:
     data_filename = f"models/taxi_data/yellow_tripdata_2019-{month_int}.csv" 
     
     print(f' opening file {data_filename}')
-    new_york_2019 = pd.read_csv(data_filename, header=0).to_numpy()
+    if os.path.exists(data_filename):
+        new_york_2019 = pd.read_csv(data_filename, header=0).to_numpy()
+    else:
+        parquet_file = f"models/taxi_data/yellow_tripdata_2019-{month_int}.parquet" 
+        df = pd.read_parquet(parquet_file)
+        print('found parquet')
+        df.to_csv(data_filename)
+        print(f'converted_parquet')
+        new_york_2019 = df.to_numpy()
     trips = []
     for i in range(new_york_2019.shape[0]):
         print(f'\r creating trip objects {i}/{new_york_2019.shape[0]}     ', end='')
