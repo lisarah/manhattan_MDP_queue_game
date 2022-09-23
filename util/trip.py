@@ -32,7 +32,7 @@ def location_compare(trip_long, trip_lat, area_long, area_lat, bound_long,
 class Trip:
     def __init__(self, trip_instance):
         # in the newer CSV version,there's an additional first entry
-        trip_instance = trip_instance[1:]
+        # trip_instance = trip_instance[1:]
         # Pickup Date retrieval
         pudate_ = trip_instance[1].split(" ")[0]
         self.pudate = datetime.datetime.strptime(pudate_, '%Y-%m-%d')  #'%m/%d/%Y'

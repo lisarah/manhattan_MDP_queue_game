@@ -47,7 +47,7 @@ months = ['dec', 'jan']
 partition_amount = [12, 15] # 12 = 15 min intervals vs 15 = 12  min intervals
 
 # Import taxi zone lookup table
-taxi_zone_file = "taxi+_zone_lookup.csv"
+taxi_zone_file = "models/taxi_data/taxi+_zone_lookup.csv"
 taxi_zone_lookup = pd.read_csv(taxi_zone_file, header = 0)
 
 #%% BOROUGH ZONES %%#
@@ -166,7 +166,7 @@ def partition(borough_trip_list, partition_hist):
 
     return trip_partitions
 #%% compute distance %%#
-compute_distance = True
+compute_distance = False
 if compute_distance:
     print('compute distance matrices')
     distance_matrix = np.zeros([len(Man_zones)-1,len(Man_zones)-1])
@@ -180,13 +180,13 @@ if compute_distance:
                 zone_i_latlon = visual.get_zone_locations('Manhattan')[Man_zones[i]]
                 zone_j_latlon = visual.get_zone_locations('Manhattan')[Man_zones[j]]
                 distance_matrix[i,j] = haversine(zone_i_latlon, zone_j_latlon)
-    np.savetxt('distance_matrix.csv', distance_matrix, delimiter=',')
+    np.savetxt('models/taxi_data/distance_matrix.csv', distance_matrix, delimiter=',')
      
 #%% TRIPS %%#
 # Create list of trip objects
 for month in months:
     month_int = '12' if month == 'dec' else '01'
-    data_filename = f"yellow_tripdata_2019-{month_int}.csv" 
+    data_filename = f"models/taxi_data/yellow_tripdata_2019-{month_int}.csv" 
     
     print(f' opening file {data_filename}')
     new_york_2019 = pd.read_csv(data_filename, header=0).to_numpy()
