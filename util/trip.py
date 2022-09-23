@@ -34,28 +34,38 @@ class Trip:
         # in the newer CSV version,there's an additional first entry
         # trip_instance = trip_instance[1:]
         # Pickup Date retrieval
-        pudate_ = trip_instance[1].split(" ")[0]
-        self.pudate = datetime.datetime.strptime(pudate_, '%Y-%m-%d')  #'%m/%d/%Y'
+        if type(trip_instance[1]) == str: 
+            pudate_ = trip_instance[1].split(" ")[0]
+            self.pudate = datetime.datetime.strptime(pudate_, '%Y-%m-%d')  #'%m/%d/%Y'
+            # Pickup Time retrieval
+            putime_ = trip_instance[1].split(" ")[1]
+            putime = putime_.split(":")
+            pu_hours_ = int(putime[0])
+            pu_minutes_ = int(putime[1])
+            # Dropoff Date retrieval
+            dodate_ = trip_instance[2].split(" ")[0]
+            self.dodate = datetime.datetime.strptime(dodate_, '%Y-%m-%d')  #'%m/%d/%Y'
+            # Dropoff Time retrieval
+            dotime_ = trip_instance[2].split(" ")[1]
+            dotime = dotime_.split(":")
+            do_hours_ = int(dotime[0])
+            do_minutes_ = int(dotime[1])
+        else:
+            pu_tstamp = trip_instance[1]
+            self.pudate =  pu_tstamp.to_pydatetime() # datetime.datetime.fromtimestamp(pu_tstamp)
+            pu_hours_ = pu_tstamp.hour
+            pu_minutes_ =  pu_tstamp.minute
+            do_tstamp = trip_instance[2]
+            self.dodate = do_tstamp.to_pydatetime() # datetime.datetime.fromtimestamp(do_tstamp)
+            do_hours_ = do_tstamp.hour
+            do_minutes_ = do_tstamp.minute
         
-        # Dropoff Date retrieval
-        dodate_ = trip_instance[2].split(" ")[0]
-        self.dodate = datetime.datetime.strptime(dodate_, '%Y-%m-%d')  #'%m/%d/%Y'
-        
-        # Pickup Time retrieval
-        putime_ = trip_instance[1].split(" ")[1]
-        putime = putime_.split(":")
-        pu_hours_ = int(putime[0])
-        pu_minutes_ = int(putime[1])
     
         elapsed_pu = datetime.timedelta(hours = pu_hours_, minutes = pu_minutes_, 
                                      seconds = 0)
         self.putime = elapsed_pu.seconds/3600 # Time in hours since beginning of day
                 
-        # Dropoff Time retrieval
-        dotime_ = trip_instance[2].split(" ")[1]
-        dotime = dotime_.split(":")
-        do_hours_ = int(dotime[0])
-        do_minutes_ = int(dotime[1])
+        
         
         elapsed_do = datetime.timedelta(hours = do_hours_, minutes = do_minutes_, 
                                      seconds = 0)
