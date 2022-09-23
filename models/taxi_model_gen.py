@@ -19,7 +19,7 @@ import models.taxi_dynamics.manhattan_neighbors as m_neighs
 # mpl.rc('legend', fontsize='small')
 
 
-directory = 'taxi_data/' 
+directory = 'models/taxi_data/' 
 months = ['dec', 'dec', 'jan', 'jan']
 t_ints = [12, 15, 12, 15]
 
