@@ -199,7 +199,7 @@ for month in months:
         df = pd.read_parquet(parquet_file)
         print('found parquet')
         df.to_csv(data_filename)
-        print(f'converted_parquet')
+        print(f'converted parquet to file {data_filename}')
         new_york_2019 = df.to_numpy()
     trips = []
     for i in range(new_york_2019.shape[0]):

@@ -31,8 +31,9 @@ def location_compare(trip_long, trip_lat, area_long, area_lat, bound_long,
 # Define trip class
 class Trip:
     def __init__(self, trip_instance):
-        # in the newer CSV version,there's an additional first entry
-        # trip_instance = trip_instance[1:]
+        if type(trip_instance[1]) == int:
+            # in the newer CSV version,there's an additional first entry
+            trip_instance = trip_instance[1:]
         # Pickup Date retrieval
         if type(trip_instance[1]) == str: 
             pudate_ = trip_instance[1].split(" ")[0]
