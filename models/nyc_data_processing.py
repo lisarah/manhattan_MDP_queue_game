@@ -184,7 +184,7 @@ if compute_distance:
                 zone_j_latlon = visual.get_zone_locations('Manhattan')[Man_zones[j]]
                 distance_matrix[i,j] = haversine(zone_i_latlon, zone_j_latlon)
     np.savetxt('models/taxi_data/distance_matrix.csv', distance_matrix, delimiter=',')
-     
+    
 #%% TRIPS %%#
 # Create list of trip objects
 for month in months:

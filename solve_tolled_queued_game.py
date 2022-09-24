@@ -23,10 +23,10 @@ borough = 'Manhattan' # borough of interest
 mass = 10000 # game population size
 constrained_value = 350 # 350  for flat # maximum driver density per state
 max_errors = [1000]#[10000, 5000, 1000, 500, 100]
-max_iterations = 10 # number of iterations of dual ascent
+max_iterations = 1000 # number of iterations of dual ascent
 toll_queues = False
-save_last_toll_results = False
-save_plots = False
+save_last_toll_results = True
+save_plots = True
 # game definition with initial distribution
 # print(f'cur seed {np.random.get_state[1][0]}')
 # np.random.seed(3239535799)
@@ -34,7 +34,7 @@ manhattan_game = queued_game.queue_game(mass, 0.01, uniform_density=True,
                                         flat=False) 
 
 initial_density = manhattan_game.get_density()
-y_res, obj_hist = fw.FW_dict(manhattan_game, max_errors[-1], 1000)
+y_res, obj_hist = fw.FW_dict(manhattan_game, max_errors[-1], max_iterations)
 # set constraints 
 constrained_zones = [161, 162, 236, 237] #[161,43,68,79,231,236,237,114]# manhattan_game.z_list
 
@@ -164,7 +164,7 @@ for err in max_errors:
     plt.grid()
     plt.tight_layout()
     if save_plots:
-        plt.savefig(f'toll_norm_convergence_{err}.png')
+        plt.savefig(f'grad_res/toll_norm_convergence_{err}.png')
     
     
     # social cost plot
@@ -283,6 +283,6 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 if save_plots:
-    plt.savefig(f'toll_norm_convergence_{err}.png')
+    plt.savefig(f'grad_res/toll_norm_convergence_{err}.png')
 
 

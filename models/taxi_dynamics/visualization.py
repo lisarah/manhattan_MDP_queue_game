@@ -16,7 +16,7 @@ from descartes.patch import PolygonPatch
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.animation import ImageMagickWriter
+from matplotlib.animation import ImageMagickWriter, PillowWriter
 import numpy as np
 import pandas as pd
 import models.taxi_dynamics.manhattan_neighbors as m_neighbors
@@ -197,7 +197,7 @@ def set_axis_limits(ax_bar, ax_time, T, is_toll, max_d, min_d, constrained_val):
 
     ax_bar.xaxis.set_visible(False)           
     ax_time.set_xlim([0, T-1])
-    ax_time.set_ylim([min_d-10, 550])
+    ax_time.set_ylim([min_d-10, 450])
     ax_time.set_xlabel(r"Time",fontsize=13)
     ax_time.grid(True)
 
@@ -274,7 +274,7 @@ def animate_combo(file_name, z_density, violation_density,
   
     ani = animation.FuncAnimation(f, animate, frames=range(T), interval=250)
     plt.show()
-    ani.save(file_name, writer='ffmpeg')  # imagemagick
+    ani.save(file_name, writer=PillowWriter(fps=1))  # 'ffmpeg' imagemagick
     
     
 def plot_borough_progress(borough_str, plot_density, times):
