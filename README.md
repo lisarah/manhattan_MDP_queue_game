@@ -5,8 +5,7 @@ This repository contains python code for the Markov decision process (MDP) conge
 
 The MDP congestion game is illustrated on a Uber driver set up with MDP dynamics in New York city generated from 1million Uber pick-up data from [Taxi and Limosine Commission](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 
-![](https://github.com/lisarah/manhattan_MDP_queue_game/grad_res/toll_queue_game_unconstrained.gif)
-
+<img src="https://github.com/lisarah/manhattan_MDP_queue_game/blob/6cd39b9f19cec06f60ba042b86b64a6d52192c2f/grad_res/toll_queue_game_unconstrained.gif" width="300" height="250"/>
 For details of the MDP model, see [arxiv paper](https://arxiv.org/abs/1907.08912).
 
 If you use our work, please cite! 
