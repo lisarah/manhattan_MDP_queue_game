@@ -29,7 +29,6 @@ constraint_violation, violation_density = manhattan_game.get_violations(
     z_density, constrained_value)
 avg_density = manhattan_game.get_average_density(z_density)
 
-# max_d = 420
 visual.summary_plot(z_density, constraint_violation, violation_density, 
                     avg_density, constrained_value, min_d=140, max_d=550) # , max_d=max_d
 
@@ -38,8 +37,3 @@ visual.animate_combo('resulting_gifs/queue_game_unconstrained.gif',
                      constraint_violation, toll_val=constrained_value, 
                      min_d=140) # , max_d=max_d
         
-    # density_t = {zq: density_dict[t][zq] 
-    #              for zq in density_dict.keys() if zq[1] == 0}
-
-    # patch_dict = draw_borough(ax_map, density_t, borough_str, 'average', 
-    #                           color_map, norm)    

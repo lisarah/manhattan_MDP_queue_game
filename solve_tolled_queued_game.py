@@ -23,10 +23,10 @@ borough = 'Manhattan' # borough of interest
 mass = 10000 # game population size
 constrained_value = 350 # 350  for flat # maximum driver density per state
 max_errors = [1000]#[10000, 5000, 1000, 500, 100]
-max_iterations = 2000 # number of iterations of dual ascent
+max_iterations = 10 # number of iterations of dual ascent
 toll_queues = False
-save_last_toll_results = True
-save_plots = True
+save_last_toll_results = False
+save_plots = False
 # game definition with initial distribution
 # print(f'cur seed {np.random.get_state[1][0]}')
 # np.random.seed(3239535799)
@@ -34,7 +34,7 @@ manhattan_game = queued_game.queue_game(mass, 0.01, uniform_density=True,
                                         flat=False) 
 
 initial_density = manhattan_game.get_density()
-y_res, obj_hist = fw.FW_dict(manhattan_game, max_errors[-1], max_iterations)
+y_res, obj_hist = fw.FW_dict(manhattan_game, max_errors[-1], 1000)
 # set constraints 
 constrained_zones = [161, 162, 236, 237] #[161,43,68,79,231,236,237,114]# manhattan_game.z_list
 
@@ -44,9 +44,15 @@ unconstrained_z = manhattan_game.get_zone_densities(y_res[-1], False)
 violation_density, constraint_violation = manhattan_game.get_violation_subset(
     unconstrained_z, constrained_zones, constrained_value)
 unconstrained_avg = manhattan_game.get_average_density(unconstrained_z)
-visual.summary_plot(unconstrained_z, constraint_violation, violation_density, 
-                    unconstrained_avg, constrained_value)
-unconstrained_max = 450
+u_min, u_max = visual.summary_plot(
+    unconstrained_z, constraint_violation, violation_density, 
+    unconstrained_avg, constrained_value, return_min_max=True)
+# unconstrained_max = 450
+u_min = 140
+visual.animate_combo('grad_res/toll_queue_game_unconstrained.gif', 
+                     unconstrained_z, violation_density,
+                     constraint_violation, toll_val=constrained_value, 
+                     max_d=u_max, min_d=u_min) # , max_d=max_d
 
 manhattan_game.set_constraints(constrained_zones, constrained_value)
 grad, violation_norm = manhattan_game.get_constrained_gradient(
@@ -175,34 +181,6 @@ for err in max_errors:
 # plot errors vs last average toll value and last violation violation
 x_axis_labels = [e /200839.1820886145 for e in max_errors]
 if len(max_errors) > 1:
-    # fig_width = 6
-    # epsilon_plot = plt.figure(figsize=(fig_width,3))
-    # toll_plot = epsilon_plot.add_subplot(1, 2,1)
-    # plt.plot(x_axis_labels, avg_tolls.values(), linewidth=3)
-    # # plt.ylabel('$\|| \hat{ τ}^k\||_2$') # , fontsize=18
-    # plt.grid()
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.xlabel('$\epsilon$', fontsize=12) #
-    # # plt.setp(toll_plot.get_xticklabels(), visible=False, fontsize=18)
-    # # plt.setp(toll_plot.get_yticklabels(), fontsize=18)
-    # # plt.setp(toll_plot.get_yticklabels(minor=True), fontsize=18)
-    # violation_plot = epsilon_plot.add_subplot(1,2, 2,sharey=toll_plot) # 
-    # plt.plot(x_axis_labels, avg_violations.values(), linewidth=3)
-    # # plt.ylabel('$||A\hat{y}^k- b||_2$') # , fontsize=18
-    # plt.xscale('log')
-    # plt.xlabel('$\epsilon$' ,fontsize=12) #
-    # plt.yscale('log')
-    # # plt.setp(violation_plot.get_xticklabels(), fontsize=18)
-    # # plt.setp(violation_plot.get_yticklabels(), fontsize=18)
-    # # plt.setp(violation_plot.get_yticklabels(minor=True), fontsize=18)
-    # plt.setp(violation_plot.get_yticklabels(), visible=False)
-    
-    # plt.grid()
-    # plt.subplots_adjust(hspace=-10)    
-    # plt.show()
-    
-    # just plot them on the same line?
     plt.figure()
     plt.plot(x_axis_labels, avg_tolls.values(), linewidth=3, 
              label='$\|| \overline{τ}^k\||_2$')
@@ -227,6 +205,20 @@ if save_last_toll_results:
                    'last_average_density': avg_distribution}
     pickle.dump(err_results, open_file)
     open_file.close()
+else:
+    trips_file = open('grad_res/err_5000_toll_results.pickle', 'rb')
+    res_dict = pickle.load(trips_file)
+    trips_file.close()
+    avg_distribution = res_dict['last_average_density']
+    tau_hist = res_dict['tau_hist']
+    tau_values = []
+    average_tau = {z: 0 for z in tau_hist[-1].keys()}
+    tau_ind = 0
+    for tau_ind in range(len(tau_hist)):
+        for z in tau.keys():
+            average_tau[z] = (average_tau[z]*tau_ind+tau_hist[tau_ind][z])/(tau_ind+1) 
+        tau_arr = np.array(list(average_tau.values())) 
+        tau_values.append(np.linalg.norm(tau_arr, 2))
 
 # plot the summary plot of the tolled average results
 # get summary friendly densities
@@ -239,11 +231,15 @@ avg_toll_time = {v_key: [average_tau[((v_key, 0), t)] for t in range(T)]
                  for v_key in violation_density.keys()}
 
 visual.summary_plot(z_density, constraint_violation, violation_density, 
-                    avg_density, constrained_value, avg_toll_time, 
-                    max_d=unconstrained_max)
+                    avg_density, constrained_value, tolls=avg_toll_time, 
+                    max_d=u_max, min_d = u_min)
+
 visual.toll_summary_plot(violation_density, avg_toll_time, constrained_value,
-                         450)
-    
+                         max_d=u_max, min_d = u_min)
+visual.animate_combo('grad_res/toll_queue_game_constrained.gif', 
+                     z_density, violation_density,
+                     constraint_violation, toll_val=constrained_value, 
+                     max_d=u_max, min_d=u_min, plot_toll=avg_toll_time) # , max_d=max_d
 # social vs convergence
 conv_vs_social = plt.figure()
 convergence_plot = conv_vs_social.add_subplot(1,2,1)

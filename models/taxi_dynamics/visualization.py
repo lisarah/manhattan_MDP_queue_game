@@ -154,18 +154,15 @@ def draw_borough(ax, densities, borough_str, color_map, norm):
         record = shape_entry.record
         borough_name = record[_shape_fields['borough']]
         
-        # print(f"in record {record[_shape_fields['zone']]} borough {borough_name}")
         if (record[_shape_fields['zone']] ==
             "Governor's Island/Ellis Island/Liberty Island"):
             continue            
         elif borough_name != borough_str:
-            # print(f' name not right')
             continue
         zone_ind = m_neighbors.ZONE_IND[record[_shape_fields['zone']]]
         if zone_ind in [103, 104, 105, 153, 194, 202]:
             continue
-        # else:
-        #     print(f' found zone {zone_ind}')
+        
         R,G,B,A = color_map(norm((densities[zone_ind])))
         color = [R,G,B]              
         patch_list = draw_shape(ax, shape, color)
@@ -206,7 +203,7 @@ def set_axis_limits(ax_bar, ax_time, T, is_toll, max_d, min_d, constrained_val):
 
 def animate_combo(file_name, z_density, violation_density, 
                   constraint_violation, toll_val=None, max_d=None, min_d=None,
-                  plot_toll=False):
+                  plot_toll=None):
     T = len(z_density)
     # determine min/max density levels
     min_density = 1
@@ -229,8 +226,8 @@ def animate_combo(file_name, z_density, violation_density,
     ax_map = f.add_subplot(1, 2, 2)
     ax_map.xaxis.set_visible(False)
     ax_map.yaxis.set_visible(False)
-    set_axis_limits(ax_bar, ax_time, T, plot_toll, max_density, min_density,
-                    toll_val)
+    set_axis_limits(ax_bar, ax_time, T, plot_toll is not None, 
+                    max_density, min_density, toll_val)
     
     # set up heat map color map and bar plot legend
     norm = mpl.colors.Normalize(vmin=(min_density), vmax=(max_density))
@@ -252,21 +249,26 @@ def animate_combo(file_name, z_density, violation_density,
         d_t = {z_ind: z_density[time_step][z_ind] 
                for z_ind in z_density[time_step].keys() if z_ind[1] == 0}
             
-        set_axis_limits(ax_bar, ax_time, T, plot_toll, 
+        set_axis_limits(ax_bar, ax_time, T, plot_toll is not None, 
                         max_density, min_density, toll_val)
         for violation in violation_density.keys():
-            bar_val = z_density[time_step][violation]
-            if plot_toll:
-                ax_bar.plot(toll_val)
+            v_ind = (violation, 0) if type(violation) == int else violation
+            bar_val = z_density[time_step][v_ind]
+            if plot_toll is not None:
+                for z_ind, t_toll in plot_toll.items():
+                    ax_bar.plot(t_toll[:time_step], linewidth=3, 
+                                label=m_neighbors.ZONE_NAME[z_ind], marker='D', 
+                                markersize=8)
             else:   
                 ax_bar.bar(loc_ind, bar_val, width = 0.8, 
                            label=bar_labels[loc_ind])
             
-            ax_time.plot([z_density[t][violation] for t in range(time_step)],
+            ax_time.plot([z_density[t][v_ind] for t in range(time_step)],
                           linewidth=3, label=bar_labels[loc_ind], marker='D', 
                           markersize=8)
             loc_ind +=1
         ax_time.legend(loc='lower right', fontsize=13)
+        # ax_bar.legend(loc='lower right', fontsize=13)
         update_borough(time_step, patch_dict, z_density[time_step], 
                        color_map, norm)
   
@@ -306,7 +308,7 @@ def plot_borough_progress(borough_str, plot_density, times):
     
 def summary_plot(z_density, constraint_violation, violation_density, 
                  avg_density, constrained_value, tolls=None, max_d=None, 
-                 min_d=None):
+                 min_d=None, return_min_max=False):
     T = len(z_density)
     # determine min/max density levels
     min_density = 1
@@ -316,12 +318,12 @@ def summary_plot(z_density, constraint_violation, violation_density,
         max_density = max(list(z_density[t].values()) + [max_density])
     heat_max = max_density
     heat_min = min_density
-    if max_d != None:
-        max_density = max_d
-    if min_d != None:
-        min_density= min_d
-    print(f'minimum density = {min_density}')
-    print(f'maximum density = {max_density}')
+    if max_d == None:
+        max_d = max_density
+    if min_d == None:
+        min_d = min_density
+    print(f'minimum density = {min_d}')
+    print(f'maximum density = {max_d}')
 
     # set up heat map color map and bar plot legend
     norm = mpl.colors.Normalize(vmin=(heat_min), vmax=(heat_max))
@@ -335,10 +337,12 @@ def summary_plot(z_density, constraint_violation, violation_density,
     ax_bar = f.add_subplot(2,2,1)
     ax_time = f.add_subplot(2,2,3)
     ax_map = f.add_subplot(1,2,2)
-    set_axis_limits(ax_bar, ax_time, T, False, max_d, min_d, constrained_value)
+    set_axis_limits(ax_bar, ax_time, T, tolls is not None, max_d, min_d, 
+                    constrained_value)
     seq = [i for i in range(len(violation_density))] #
     # if toll values are given, plot tolls on upper left
     if tolls != None:
+        print('printing tolls')
         toll_time_vary = []
         for line in tolls.values(): 
             toll_time_vary.append(line)
@@ -375,6 +379,9 @@ def summary_plot(z_density, constraint_violation, violation_density,
     ax_map.xaxis.set_visible(False)
     ax_map.yaxis.set_visible(False)
     plt.show()
+    
+    if return_min_max:
+        return heat_min, heat_max
     
 def toll_summary_plot(violation_density, tolls,
                    constrained_value, max_d, min_d=150, T=12):
