@@ -1,12 +1,21 @@
 # manhattan_MDP_queue_game
-This repository contains python code for the Markov decision process (MDP) congestion games, a game model for large groups of users with Markov decision process dynamics. Two algorithms are developed for the game: 
+This repository contains the python code for: 
+1. A Markov decision process (MDP) model of Manhattan's ride-hail drivers. The model is built on the 2019 ride demand data from the [Taxi and Limosine Commission](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+	* Time: 12 or 15 minute intervals between 9 am and noon. 
+	* States: states are consisted of \(z\), a Manhattan neighborhood zone, and \(q\), a queue level. A queue level of zero means the driver is in the given zone \(z\), a queue level greater than zero means that the driver is \(q \cdot \Delta t\) away from arriving in zone \(z\). 
+	* Actions: actions are state dependent. At non-zero queue levels, the only action is to drop in queue. At the zeroth queue level, drivers can choose to wait for a rider or go to a neighboring zone. 
+	* Transition: at higher queue levels, drivers stay in the same zone and drop in queue level with probability \(1\). At the zeroth queue level, if drivers choose to go to neighborhood zone, they transition to the target zone with configurable probability between \((0, 1)\). If drivers choose to pick up a rider, they transition to the rider's destination zone at the appropriate queue level. The probability distribution for riders' destination is determined by the 2019 ride demand data. 
+	<img src="https://github.com/lisarah/manhattan_MDP_queue_game/blob/6cd39b9f19cec06f60ba042b86b64a6d52192c2f/queue_networks.png" width="150" height="250"/>
+	* Cost: cost of all transit actions have corresponding gas cost. Cost of all rider pick up actions are inversely proportional to the ride demand at each zone. 
+2. A congestion game model built on top of the single driver MDP. For details, see [our paper](https://arxiv.org/abs/1907.08912).
 1. A Frank-Wolfe gradient descent method that solves for the Wardrop equilibrium by iteratively performing value iteration.
 2. An inexact gradient ascent method that enforces driver population constraints without explicit knowledge of game costs and dynamics.
 
-The MDP congestion game is illustrated on a Uber driver set up with MDP dynamics in New York city generated from 1million Uber pick-up data from [Taxi and Limosine Commission](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
-
+The congestion game dynamics look like
 <img src="https://github.com/lisarah/manhattan_MDP_queue_game/blob/6cd39b9f19cec06f60ba042b86b64a6d52192c2f/grad_res/toll_queue_game_unconstrained.gif" width="300" height="250"/>
-For details of the MDP model, see [our paper](https://arxiv.org/abs/1907.08912).
+
+To enforce driver population constraints, we use zone-based tolls. By tolling the most congested three zones, we are able to cap the driver population in those states to \(350\) drivers at any time. 
+<img src="https://github.com/lisarah/manhattan_MDP_queue_game/blob/6cd39b9f19cec06f60ba042b86b64a6d52192c2f/grad_res/toll_queue_game_constrained.gif" width="300" height="250"/>
 
 If you use our work, please cite! 
 ```
@@ -18,7 +27,7 @@ If you use our work, please cite!
 }
 ```
 
-## Setting up the NYC example
+## Setting up the MDP model
 1. Download trip data and the file `taxi+_zone_lookup.csv` from [TLC](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) into a new folder taxi_data under models. Current example uses `yellow_tripdata_2019-01.csv` and `yellow_tripdata_2019-12.csv`. Also download taxi look
 2. Double check that line `169` in `models/nyc_data_processing.py` is set to `True`, and run `nyc_data_processing.py`. This should generate `distance_matrix.csv` and processed trip pickles into `models/taxi_data`
 3. Run `models/taxi_model_gen.py`
