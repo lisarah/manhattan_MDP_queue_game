@@ -1,6 +1,6 @@
 # manhattan_MDP_queue_game
 This repository contains the python code for: 
-1. A Markov decision process (MDP) model of Manhattan's ride-hail drivers. The model is built on the 2019 ride demand data from the [Taxi and Limosine Commission](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+1. A Markov decision process (MDP) model of Manhattan's ride-hail drivers. The model is built on the 2019 ride demand data from the [Taxi and Limousine Commission](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 	* Time: 12 or 15 minute intervals between 9 am and noon. 
 	* States: states are consisted of \(z\), a Manhattan neighborhood zone, and \(q\), a queue level. A queue level of zero means the driver is in the given zone \(z\), a queue level greater than zero means that the driver is \(q \cdot \Delta t\) away from arriving in zone \(z\). 
 	* Actions: actions are state dependent. At non-zero queue levels, the only action is to drop in queue. At the zeroth queue level, drivers can choose to wait for a rider or go to a neighboring zone. 
